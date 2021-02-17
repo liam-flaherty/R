@@ -1,0 +1,192 @@
+###User Defined Functions###
+number.letters=function (x) {             #character input, numeric vector output#
+  myletters=letters[1:26]; a=vector()     
+  for (i in 1:nchar(x)) {
+    a[i]=match(
+      substr(tolower(x),start=i,stop=i),  #Uppercase not in myletters#
+      myletters)-1                        #a is 0, z is 25#
+  }
+  return(a[!is.na(a)])                    #removes punctuation#
+}
+
+letter.numbers=function (x) {             #numeric vector input, character vector output#
+  myletters=letters[1:26]; a=vector()
+  for (i in 1:length(x)) {
+    a[i]=myletters[x[i]+1]
+  }
+  return(paste(a,collapse=""))
+}
+
+ascii.letters=function (x) {              #character input, numeric vector output#
+  myletters=letters[1:26]; a=vector()     
+  for (i in 1:nchar(x)) {
+    a[i]=match(
+      substr(tolower(x),start=i,stop=i),  #Uppercase not in myletters#
+      myletters)+96                       #a is 97, z is 122#
+  }
+  return(a[!is.na(a)])                    #removes punctuation#
+}
+
+letter.ascii=function (x) {
+  myletters=letters[1:26]; a=vector()
+  for (i in 1:length(x)) {
+    a[i]=myletters[x[i]-96]
+  }
+  return(paste(a,collapse=""))
+} 
+
+factors=function (x) {  
+  a=1:(ceiling(x/2))
+  b=a[x%%a==0]          
+  return(append(b,x))
+}
+
+gcd=function (x,y) {
+  return(max(intersect(factors(x),factors(y))))
+}
+
+primes=function (x) {
+  i=1; a=vector()
+  for (j in 1:x) {
+    if (length(factors(j))==2) {
+      a[i]=j
+      i=i+1
+    }
+  }
+  return(a)
+}
+
+units=function (x) {
+  a=vector(); i=1
+  for (j in 1:x) {
+    if (gcd(j,x)==1) {
+      a[i]=j
+      i=i+1
+    }
+  }
+  return(a)
+}    
+
+zero.divisors=function (x) {
+  a=units(x)
+  b=1:(x-1)
+  return(b[!is.element(b,a)])
+}
+
+totient=function (x) {
+  return(length(units(x)))
+}
+
+mod.inv=function (x,y) {     #want inverse of x mod y#
+  i=0; a=0
+  if (is.element(x,zero.divisors(y))) {
+    i=0
+  } else {
+    while (a!=1) {
+      i=i+1
+      a=(i*x)%%y
+    }
+  }
+  return(i)
+}
+
+orbit=function (x,y) {
+  if (x==1 | (x*x)%%y==x) {
+    a=x
+  } else {
+    a=vector(); a[1]=x; i=1
+    while (a[i]==x | !is.element(a[i],a[1:(i-1)])) {
+      a[i+1]=(a[i]*x)%%y
+      i=i+1
+    }
+  }
+  return(unique(a))
+}
+
+ord=function (x,y) {    #"order" is a built in function#
+  a=orbit(x,y)
+  if (!is.element(1, a)) {
+    b=0
+  } else {
+    b=match(1,a)
+  }
+  return(b)
+}
+
+primitives=function (x) {          #z is primitive if every unit in Zx is a power of z#
+  a=units(x); b=totient(x); i=1; e=vector()
+  for (j in 1:(x-1)) {
+    c=orbit(j,x)
+    d=match(a,c)
+    d=d[!is.na(d)]
+    if (length(d)==b) {
+      e[i]=j
+      i=i+1
+    }
+  }
+  if (length(e)>0) {
+    return(e)
+  } else {
+    return(0)
+  }
+}
+
+basis=function (x,y) {                 #base 10 integer, base less than 36#
+  if (x<y) {
+    if (x>9) {                         #for bases>10, use alphabet (10=A, 11=B,...)#
+      n=toupper(letter.numbers(x-10))  #"letter.numbers" is previous u.d.f#
+    } else {
+      n=x
+    }
+  } else {
+    i=0; r=x                          
+    while ((y^i)<=r) {                #i is length of representation#
+      i=i+1
+    }   
+    a=vector(); k=0                   #k keeps track of length#
+    while (r!=0) {                    #run until no remainder#
+      j=0                         
+      while ((j*(y^(i-1)))<=r) {       #the coefficient#
+        j=j+1
+      } 
+      k=k+1; a[k]=j-1                  #the coefficient after kth loop is kth leftmost value# 
+      r=r-((j-1)*y^(i-1)); i=i-1       #the remainder; the new power#
+    }  
+    l=(i)-length(a)                   #accounting for trailing zeros#
+    if (l>0){
+      a=c(a,rep(0,l))
+    }  
+    for (m in 1:length(a)) {           
+      if (as.numeric(a[m])>9) {        #if base>9, represent values with alphabet#
+        a[m]=toupper(letter.numbers(as.numeric(a[m])-10))
+      }
+    }
+    n=paste(a,collapse="")             #concatenate each entry in vector together#
+  }
+  return(n)
+}
+
+Alphabet=toupper(letters[1:26])
+Simple=0:25;ASCII=65:90
+Binary=vector(); Hexadecimal=vector();Octal=vector()
+for (i in 1:length(ASCII)) {
+  Binary[i]=paste0("0",basis(ASCII[i],2))   #to make 8 digits, or a byte#
+  Hexadecimal[i]=basis(ASCII[i],16)
+  Octal[i]=basis(ASCII[i],8)
+}
+char.rep=data.frame(Alphabet,Simple,ASCII,Binary,Hexadecimal,Octal)
+char.rep
+
+add.elliptic=function (p,q,param) { #point 1, point 2, parameters#
+    s=((q[2]-p[2])*mod.inv(q[1]-p[1],param[[3]]))%%param[[3]]
+    x3=(s^2-p[1]-q[1])%%param[[3]]
+    y3=(-1*(p[2]+s*(x3-p[1])))%%param[[3]]
+    return(c(x3,y3))
+} 
+  
+mult.elliptic=function (x,p,param) { #multiple, point, parameters#
+s=((3*p[1]^2+param[[1]])*mod.inv(2*p[2],param[[3]]))%%param[[3]]
+x3=(s^2-2*p[1])%%param[[3]]
+y3=(p[2]+s*(x3-p[1]))%%param[[3]]
+return(c(x3,y3))
+}
